@@ -19,7 +19,7 @@ def historic(n):
         i += 1
 
 if __name__ == "__main__":
-    primes = sorted(list(historic(5000)))[-2500:]
+    primes = sorted(list(historic(7500)))[-2500:]
     w, h = 25, 100
     Matrix1 = [[primes[x*100+y] for x in range(w)] for y in range(h)]
     np.savetxt("test.txt",np.matrix(Matrix1),fmt='%1d')

@@ -9,7 +9,7 @@ def main():
     conn_string = "host='localhost' dbname='mydb' user='ollie' password='ollie'"
     conn = psycopg2.connect(conn_string)
     cursor = conn.cursor()
-    cursor.execute("SELECT cc_image, x, y, w, h FROM moments WHERE page = 885 AND x > 265 AND y > 550")
+    cursor.execute("SELECT cc_image, x, y, w, h FROM moments WHERE page = 886 AND x > 300 AND y > 550")
     records = cursor.fetchall()
     cursor.close()
 
@@ -30,7 +30,7 @@ def main():
     conn_string = "host='localhost' dbname='mydb' user='ollie' password='ollie'"
     conn = psycopg2.connect(conn_string)
     cursor = conn.cursor()
-    cursor.execute("SELECT cc_image FROM moments WHERE page = 885 AND x < 300 AND x > 265 AND y > 550 AND y < 5500 ORDER BY y ASC")
+    cursor.execute("SELECT cc_image FROM moments WHERE page = 886 AND x < 350 AND x > 300 AND y > 550 AND y < 5500 ORDER BY y ASC")
     startOfLines = cursor.fetchall()
     cursor.close()
     startOfLinesImg = []
@@ -48,7 +48,7 @@ def main():
 
     i = 0;
     for image in startOfLinesImg:
-        copyfile('/home/ollie/PycharmProjects/AandS-mono600_ccs/page-0885/' + image,
+        copyfile('/home/ollie/PycharmProjects/AandS-mono600_ccs/page-0886/' + image,
                      '/home/ollie/work/fyp/characterSorter/startOfLine/' +image)
         i+=1
 
@@ -82,7 +82,7 @@ def main():
             while(counter < len(values[num])):
                 number = values[num][counter]
                 image = characters[counter][0]
-                copyfile('/home/ollie/PycharmProjects/AandS-mono600_ccs/page-0885/' + image,'/home/ollie/work/fyp/characterSorter/' + number + '/' + image)
+                copyfile('/home/ollie/PycharmProjects/AandS-mono600_ccs/page-0886/' + image,'/home/ollie/work/fyp/characterSorter/' + number + '/' + image)
 
                 counter += 1
 
