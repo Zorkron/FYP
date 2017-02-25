@@ -7,28 +7,32 @@ from os.path import isfile, join
 
 #settings
 np.set_printoptions(threshold=np.nan)
-NumberOfImages = 1
+NumberOfImages = 1000
 NumberOfTestImages = 500
 
 
 def extract(num):
     numbers = []
-    names = [f for f in listdir("/home/ollie/Pictures/digits/" + str(num)) if isfile(join("/home/ollie/Pictures/digits/" + str(num), f))]
+    names = [f for f in listdir("/home/ollie/work/fyp/digits/" + str(num)) if isfile(join("/home/ollie/work/fyp/digits/" + str(num), f))]
     shuffle(names)
     total = 0
+    debug = 0
     for loc in names:
         if total < NumberOfImages + NumberOfTestImages:
-            with Image.open('/home/ollie/Pictures/digits/' + str(num) + '/' + loc) as imageFile:
-                template = np.ones((35,35),dtype=np.int)
-                a = np.array(imageFile)
-                a[:] = [x / 255 for x in a]
-                new = a[:, :, 0]
-                template[0:new.shape[0],0:new.shape[1]] = new
-                template = template.flatten()
-                template[template == 0] = 255
-                template[template == 1] = 0
-                template[template == 255] = 1
-                numbers.append(template)
+            with Image.open('/home/ollie/work/fyp/digits/' + str(num) + '/' + loc) as imageFile:
+                image = imageFile
+                image = image.resize((24, 24),resample = Image.BILINEAR)
+                image = np.array(image)
+                newImage = []
+                for x in range(24):
+                    values = []
+                    for y in range(24):
+                       values.append(int(image[x][y][3] > 24))
+                    newImage.append(values)
+                image = np.array(newImage)
+                image = image.flatten()
+                numbers.append(image)
+
             total += 1
         else:
             break
@@ -106,8 +110,8 @@ testNines = nines[NumberOfImages:NumberOfImages+NumberOfTestImages]
 
 #training
 print("Setting up training...")
-x = tf.placeholder(tf.float32, [None, 1225])
-W = tf.Variable(tf.zeros([1225, 10]))
+x = tf.placeholder(tf.float32, [None, 576])
+W = tf.Variable(tf.zeros([576, 10]))
 b = tf.Variable(tf.zeros([10]))
 y = tf.matmul(x, W) + b
 
@@ -118,6 +122,7 @@ train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
 
 sess = tf.InteractiveSession()
 tf.global_variables_initializer().run()
+
 
 print("Training...")
 sess.run(train_step, feed_dict={x: images, y_: labels})
