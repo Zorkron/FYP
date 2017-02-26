@@ -1,56 +1,50 @@
 import numpy as np
 import tensorflow as tf
-from random import shuffle
 from PIL import Image
 from os import listdir
 from os.path import isfile, join
 
 #settings
 np.set_printoptions(threshold=np.nan)
-NumberOfImages = 1000
-NumberOfTestImages = 500
+unique_characters = 10
+number_of_images = 100
+number_of_test_images = 1000
+max_steps = 20
+directory = "/home/ollie/work/fyp"
 
 
-def extract(num):
-    numbers = []
-    names = [f for f in listdir("/home/ollie/work/fyp/digits/" + str(num)) if isfile(join("/home/ollie/work/fyp/digits/" + str(num), f))]
-    shuffle(names)
-    total = 0
-    debug = 0
-    for loc in names:
-        if total < NumberOfImages + NumberOfTestImages:
-            with Image.open('/home/ollie/work/fyp/digits/' + str(num) + '/' + loc) as imageFile:
-                image = imageFile
-                image = image.resize((24, 24),resample = Image.BILINEAR)
-                image = np.array(image)
-                newImage = []
-                for x in range(24):
-                    values = []
-                    for y in range(24):
-                       values.append(int(image[x][y][3] > 24))
-                    newImage.append(values)
-                image = np.array(newImage)
-                image = image.flatten()
-                numbers.append(image)
-
-            total += 1
-        else:
-            break
-    return numbers
+def extract_all(total):
+    l = []
+    for num in range(total):
+        numbers = []
+        names = [f for f in listdir(directory + "/digits/" + str(num)) if isfile(join(directory + "/digits/" + str(num), f))]
+        total = 0
+        for loc in names:
+            if total < number_of_images + number_of_test_images:
+                with Image.open(directory + "/digits/" + str(num) + "/" + loc) as imageFile:
+                    image = imageFile
+                    image = image.resize((28, 28),resample = Image.BILINEAR)
+                    image = np.array(image)
+                    newImage = []
+                    for x in range(28):
+                        values = []
+                        for y in range(28):
+                           values.append(image[x][y][3]/255)
+                        newImage.append(values)
+                    image = np.array(newImage)
+                    image = image.flatten()
+                    numbers.append(image)
+                total += 1
+            else:
+                break
+        print("    "+str(num)+" complete")
+        l.append(numbers)
+    return l
 
 #import images data
 print("Loading raw images...")
 
-zeros = extract(0)
-ones = extract(1)
-twos = extract(2)
-threes = extract(3)
-fours = extract(4)
-fives = extract(5)
-sixes = extract(6)
-sevens = extract(7)
-eights = extract(8)
-nines = extract(9)
+all_images = extract_all(unique_characters)
 
 print("Import complete.")
 
@@ -58,74 +52,115 @@ print("Import complete.")
 print("Generating training images...")
 
 images = []
-images.extend(zeros[:NumberOfImages])
-images.extend(ones[:NumberOfImages])
-images.extend(twos[:NumberOfImages])
-images.extend(threes[:NumberOfImages])
-images.extend(fours[:NumberOfImages])
-images.extend(fives[:NumberOfImages])
-images.extend(sixes[:NumberOfImages])
-images.extend(sevens[:NumberOfImages])
-images.extend(eights[:NumberOfImages])
-images.extend(nines[:NumberOfImages])
+
+for i in range(unique_characters):
+    images.extend(all_images[i][:number_of_images])
 
 #generate labels
 print("Generating training labels...")
 
+def label_generator(num):
+    label = [0] * unique_characters
+    label[num] = 1
+    return label
+
 labels = []
-for i in range(NumberOfImages):
-    labels.append([1,0,0,0,0,0,0,0,0,0])
-for i in range(NumberOfImages):
-    labels.append([0,1,0,0,0,0,0,0,0,0])
-for i in range(NumberOfImages):
-    labels.append([0,0,1,0,0,0,0,0,0,0])
-for i in range(NumberOfImages):
-    labels.append([0,0,0,1,0,0,0,0,0,0])
-for i in range(NumberOfImages):
-    labels.append([0,0,0,0,1,0,0,0,0,0])
-for i in range(NumberOfImages):
-    labels.append([0,0,0,0,0,1,0,0,0,0])
-for i in range(NumberOfImages):
-    labels.append([0,0,0,0,0,0,1,0,0,0])
-for i in range(NumberOfImages):
-    labels.append([0,0,0,0,0,0,0,1,0,0])
-for i in range(NumberOfImages):
-    labels.append([0,0,0,0,0,0,0,0,1,0])
-for i in range(NumberOfImages):
-    labels.append([0,0,0,0,0,0,0,0,0,1])
+for i in range(unique_characters):
+    for j in range(number_of_images):
+        labels.append(label_generator(i))
 
 #generate test images
 print("Generating test images...")
 
-testZeroes = zeros[NumberOfImages:NumberOfImages+NumberOfTestImages]
-testOnes = ones[NumberOfImages:NumberOfImages+NumberOfTestImages]
-testTwos = twos[NumberOfImages:NumberOfImages+NumberOfTestImages]
-testThrees = threes[NumberOfImages:NumberOfImages+NumberOfTestImages]
-testFours = fours[NumberOfImages:NumberOfImages+NumberOfTestImages]
-testFives = fives[NumberOfImages:NumberOfImages+NumberOfTestImages]
-testSixes = sixes[NumberOfImages:NumberOfImages+NumberOfTestImages]
-testSevens = sevens[NumberOfImages:NumberOfImages+NumberOfTestImages]
-testEights = eights[NumberOfImages:NumberOfImages+NumberOfTestImages]
-testNines = nines[NumberOfImages:NumberOfImages+NumberOfTestImages]
+test_images = []
+for i in range(unique_characters):
+    test_images.append(all_images[i][number_of_images:number_of_images+number_of_test_images])
+
+
+#generate test lables
+
+test_labels = []
+for i in range(unique_characters):
+    for j in range(number_of_test_images):
+        test_labels.append(label_generator(i))
+
 
 #training
-print("Setting up training...")
-x = tf.placeholder(tf.float32, [None, 576])
-W = tf.Variable(tf.zeros([576, 10]))
-b = tf.Variable(tf.zeros([10]))
-y = tf.matmul(x, W) + b
+def weight_variable(shape):
+  initial = tf.truncated_normal(shape, stddev=0.1)
+  return tf.Variable(initial)
 
-y_ = tf.placeholder(tf.float32, [None, 10])
+def bias_variable(shape):
+  initial = tf.constant(0.1, shape=shape)
+  return tf.Variable(initial)
+																																																																																																													
+def conv2d(x, W):
+  return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
 
-cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
-train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
+def max_pool_2x2(x):
+  return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
+                        strides=[1, 2, 2, 1], padding='SAME')
 
+
+# Input layer
+x  = tf.placeholder(tf.float32, [None, 784], name='x')
+y_ = tf.placeholder(tf.float32, [None, unique_characters],  name='y_')
+x_image = tf.reshape(x, [-1, 28, 28, 1])
+
+# Convolutional layer 1
+W_conv1 = weight_variable([5, 5, 1, 32])
+b_conv1 = bias_variable([32])
+
+h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
+h_pool1 = max_pool_2x2(h_conv1)
+
+# Convolutional layer 2
+W_conv2 = weight_variable([5, 5, 32, 64])
+b_conv2 = bias_variable([64])
+
+h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
+h_pool2 = max_pool_2x2(h_conv2)
+
+# Fully connected layer 1
+h_pool2_flat = tf.reshape(h_pool2, [-1, 7*7*64])
+
+W_fc1 = weight_variable([7 * 7 * 64, 1024])
+b_fc1 = bias_variable([1024])
+
+h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
+
+# Dropout
+keep_prob  = tf.placeholder(tf.float32)
+h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
+
+# Fully connected layer 2 (Output layer)
+W_fc2 = weight_variable([1024, unique_characters])
+b_fc2 = bias_variable([unique_characters])
+
+y = tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2, name='y')
+
+# Evaluation functions
+cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(y), reduction_indices=[1]))
+
+correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
+accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name='accuracy')
+
+# Training algorithm
+train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+
+# Training steps
 sess = tf.InteractiveSession()
-tf.global_variables_initializer().run()
+sess.run(tf.global_variables_initializer())
 
+print("Beginning training...")
 
-print("Training...")
-sess.run(train_step, feed_dict={x: images, y_: labels})
+for step in range(max_steps):
+  sess.run(train_step, feed_dict={x: images, y_: labels, keep_prob: 0.5})
+  print("    "+str(step)+"/"+str(max_steps), end="\r")
+  #print(step, sess.run(accuracy, feed_dict={x: testImages, y_: testLabels, keep_prob: 1.0}))
+
+print("Training complete.")
+print()
 
 #test
 
@@ -134,38 +169,17 @@ def largestMember(l):
 
 def analyseResult(result):
     results = []
-    for i in range(10):
+    for i in range(unique_characters):
         results.append(result.count(i))
     return results
 
 def analyse(number):
-    numberImages = []
-
-    if number == 0:
-        numberImages = testZeroes
-    if number == 1:
-        numberImages = testOnes
-    if number == 2:
-        numberImages = testTwos
-    if number == 3:
-        numberImages = testThrees
-    if number == 4:
-        numberImages = testFours
-    if number == 5:
-        numberImages = testFives
-    if number == 6:
-        numberImages = testSixes
-    if number == 7:
-        numberImages = testSevens
-    if number == 8:
-        numberImages = testEights
-    if number == 9:
-        numberImages = testNines
+    numberImages = test_images[number]
 
     results = []
 
     for i in range(len(numberImages)):
-        results.append(largestMember(sess.run(y,feed_dict={x: [numberImages[i]]})))
+        results.append(largestMember(sess.run(y,feed_dict={x: [numberImages[i]], keep_prob: 1.0})))
 
     analysedResults = analyseResult(results)
 
@@ -186,7 +200,7 @@ def analyse(number):
 
 totalCorrect = 0
 
-for i in range(10):
+for i in range(unique_characters):
     totalCorrect += analyse(i)
 
-print("Overall accuracy: "+str(totalCorrect*100/(NumberOfTestImages*10))+"%")
+print("Overall accuracy: "+str(totalCorrect*100/(number_of_test_images*unique_characters))+"%")
