@@ -117,13 +117,20 @@ b_conv2 = bias_variable([64])
 h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
 h_pool2 = max_pool_2x2(h_conv2)
 
-# Fully connected layer 1
-h_pool2_flat = tf.reshape(h_pool2, [-1, int(scaled_image_size[0]/4)*int(scaled_image_size[1]/4)*64])
+# Convolutional layer 3
+W_conv3 = weight_variable([5, 5, 64, 128])
+b_conv3 = bias_variable([128])
 
-W_fc1 = weight_variable([int(scaled_image_size[0]/4) * int(scaled_image_size[1]/4) * 64, 1024])
+h_conv3 = tf.nn.relu(conv2d(h_pool2, W_conv3) + b_conv3)
+h_pool3 = max_pool_2x2(h_conv3)
+
+# Fully connected layer 1
+h_pool3_flat = tf.reshape(h_pool3, [-1, int(scaled_image_size[0]/8)*int(scaled_image_size[1]/8)*128])
+
+W_fc1 = weight_variable([int(scaled_image_size[0]/8) * int(scaled_image_size[1]/8) * 128, 1024])
 b_fc1 = bias_variable([1024])
 
-h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
+h_fc1 = tf.nn.relu(tf.matmul(h_pool3_flat, W_fc1) + b_fc1)
 
 # Dropout
 keep_prob  = tf.placeholder(tf.float32)
