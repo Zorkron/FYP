@@ -7,10 +7,11 @@ from os.path import isfile, join
 #settings
 np.set_printoptions(threshold=np.nan)
 unique_characters = 10
-number_of_images = 100
+number_of_images = 1
 number_of_test_images = 1000
-max_steps = 20
+training_steps = 100
 directory = "/home/ollie/work/fyp"
+scaled_image_size = (32,32)
 
 
 def extract_all(total):
@@ -23,15 +24,10 @@ def extract_all(total):
             if total < number_of_images + number_of_test_images:
                 with Image.open(directory + "/digits/" + str(num) + "/" + loc) as imageFile:
                     image = imageFile
-                    image = image.resize((28, 28),resample = Image.BILINEAR)
+                    image = image.resize(scaled_image_size,resample = Image.BILINEAR)
                     image = np.array(image)
-                    newImage = []
-                    for x in range(28):
-                        values = []
-                        for y in range(28):
-                           values.append(image[x][y][3]/255)
-                        newImage.append(values)
-                    image = np.array(newImage)
+                    image = image[:, :, 3]
+                    image = np.divide(image,255)
                     image = image.flatten()
                     numbers.append(image)
                 total += 1
@@ -103,9 +99,9 @@ def max_pool_2x2(x):
 
 
 # Input layer
-x  = tf.placeholder(tf.float32, [None, 784], name='x')
+x  = tf.placeholder(tf.float32, [None, scaled_image_size[0] * scaled_image_size[1]], name='x')
 y_ = tf.placeholder(tf.float32, [None, unique_characters],  name='y_')
-x_image = tf.reshape(x, [-1, 28, 28, 1])
+x_image = tf.reshape(x, [-1, scaled_image_size[0], scaled_image_size[1], 1])
 
 # Convolutional layer 1
 W_conv1 = weight_variable([5, 5, 1, 32])
@@ -122,9 +118,9 @@ h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
 h_pool2 = max_pool_2x2(h_conv2)
 
 # Fully connected layer 1
-h_pool2_flat = tf.reshape(h_pool2, [-1, 7*7*64])
+h_pool2_flat = tf.reshape(h_pool2, [-1, int(scaled_image_size[0]/4)*int(scaled_image_size[1]/4)*64])
 
-W_fc1 = weight_variable([7 * 7 * 64, 1024])
+W_fc1 = weight_variable([int(scaled_image_size[0]/4) * int(scaled_image_size[1]/4) * 64, 1024])
 b_fc1 = bias_variable([1024])
 
 h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
@@ -142,9 +138,6 @@ y = tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2, name='y')
 # Evaluation functions
 cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(y), reduction_indices=[1]))
 
-correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
-accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name='accuracy')
-
 # Training algorithm
 train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
 
@@ -154,9 +147,9 @@ sess.run(tf.global_variables_initializer())
 
 print("Beginning training...")
 
-for step in range(max_steps):
+for step in range(training_steps):
   sess.run(train_step, feed_dict={x: images, y_: labels, keep_prob: 0.5})
-  print("    "+str(step)+"/"+str(max_steps), end="\r")
+  print("    "+str(step)+"/"+str(training_steps), end="\r")
   #print(step, sess.run(accuracy, feed_dict={x: testImages, y_: testLabels, keep_prob: 1.0}))
 
 print("Training complete.")
@@ -164,10 +157,7 @@ print()
 
 #test
 
-def largestMember(l):
-    return np.argmax(l)
-
-def analyseResult(result):
+def analyse_result(result):
     results = []
     for i in range(unique_characters):
         results.append(result.count(i))
@@ -179,9 +169,9 @@ def analyse(number):
     results = []
 
     for i in range(len(numberImages)):
-        results.append(largestMember(sess.run(y,feed_dict={x: [numberImages[i]], keep_prob: 1.0})))
+        results.append(np.argmax(sess.run(y,feed_dict={x: [numberImages[i]], keep_prob: 1.0})))
 
-    analysedResults = analyseResult(results)
+    analysedResults = analyse_result(results)
 
     def percentageOfTotal(list,loc):
         return list[loc]/sum(list)*100
