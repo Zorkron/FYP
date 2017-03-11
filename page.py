@@ -6,9 +6,9 @@ from os.path import isfile, join
 
 #settings
 np.set_printoptions(threshold=np.nan)
-unique_characters = 10
-number_of_images = 1
-number_of_test_images = 1944
+unique_characters = 8
+number_of_images = 10
+number_of_test_images = 1
 training_steps = 100
 directory = "/home/ollie/work/fyp"
 scaled_image_size = (32,32)
@@ -16,6 +16,14 @@ scaled_image_size = (32,32)
 if number_of_images + number_of_test_images > 1945: #1945 0s in dataset
     print("number_of_images + number_of_test_images > 1945")
     quit()
+
+def format_image(image):
+    image = image.resize(scaled_image_size,resample = Image.BILINEAR)
+    image = np.array(image)
+    image = image[:, :, image.shape[2]-1]
+    image = np.divide(image,255)
+    image = image.flatten()
+    return image
 
 def extract_all(total):
     l = []
@@ -26,24 +34,19 @@ def extract_all(total):
         for loc in names:
             if total < number_of_images + number_of_test_images:
                 with Image.open(directory + "/digits/" + str(num) + "/" + loc) as imageFile:
-                    image = imageFile
-                    image = image.resize(scaled_image_size,resample = Image.BILINEAR)
-                    image = np.array(image)
-                    image = image[:, :, 3]
-                    image = np.divide(image,255)
-                    image = image.flatten()
+                    image = format_image(imageFile)
                     numbers.append(image)
                 total += 1
             else:
                 break
-        print("    "+str(num)+" complete")
+        print("    "+str(num)+" complete", end="\r")
         l.append(numbers)
     return l
 
 #import images data
 print("Loading raw images...")
 
-all_images = extract_all(unique_characters)
+all_images = extract_all(10)
 
 print("Import complete.")
 
@@ -72,16 +75,8 @@ for i in range(unique_characters):
 print("Generating test images...")
 
 test_images = []
-for i in range(unique_characters):
+for i in range(10):
     test_images.append(all_images[i][number_of_images:number_of_images+number_of_test_images])
-
-
-#generate test lables
-
-test_labels = []
-for i in range(unique_characters):
-    for j in range(number_of_test_images):
-        test_labels.append(label_generator(i))
 
 
 #training
@@ -159,40 +154,41 @@ print()
 
 #test
 
-def analyse_result(result):
-    results = []
-    for i in range(unique_characters):
-        results.append(result.count(i))
-    return results
+def extract_value(prob_list):
+    prob_list = prob_list[0]
+    indexes = [i for i in range(len(prob_list)) if prob_list[i] > 0.999999]
+    if len(indexes) == 0:
+       return -1
+    return indexes[0]
+    
+with Image.open("/home/ollie/work/fyp/digits/unknown/c03983_x1794_y2311.tif") as imageFile:
+    im = imageFile
+    testImage1 = format_image(im)
 
-def analyse(number):
-    numberImages = test_images[number]
+with Image.open("/home/ollie/work/fyp/digits/unknown/c06669_x1155_y3430.tif") as imageFile:
+    im = imageFile
+    testImage2 = format_image(im)
 
-    results = []
+with Image.open("/home/ollie/work/fyp/digits/unknown/c03921_x0960_y2233.tif") as imageFile:
+    im = imageFile
+    testImage3 = format_image(im)
 
-    for i in range(len(numberImages)):
-        results.append(np.argmax(sess.run(y,feed_dict={x: [numberImages[i]], keep_prob: 1.0})))
+with Image.open("/home/ollie/work/fyp/digits/unknown/c10631_x0682_y5156.tif") as imageFile:
+    im = imageFile
+    testImage4 = format_image(im)
 
-    analysedResults = analyse_result(results)
+print(extract_value(sess.run(y,feed_dict={x: [test_images[0][0]], keep_prob: 1.0})))
+print(extract_value(sess.run(y,feed_dict={x: [test_images[1][0]], keep_prob: 1.0})))
+print(extract_value(sess.run(y,feed_dict={x: [test_images[2][0]], keep_prob: 1.0})))
+print(extract_value(sess.run(y,feed_dict={x: [test_images[3][0]], keep_prob: 1.0})))
+print(extract_value(sess.run(y,feed_dict={x: [test_images[4][0]], keep_prob: 1.0})))
+print(extract_value(sess.run(y,feed_dict={x: [test_images[5][0]], keep_prob: 1.0})))
+print(extract_value(sess.run(y,feed_dict={x: [test_images[6][0]], keep_prob: 1.0})))
+print(extract_value(sess.run(y,feed_dict={x: [test_images[7][0]], keep_prob: 1.0})))
+print(extract_value(sess.run(y,feed_dict={x: [test_images[8][0]], keep_prob: 1.0})))
+print(extract_value(sess.run(y,feed_dict={x: [test_images[9][0]], keep_prob: 1.0})))
+print(extract_value(sess.run(y,feed_dict={x: [testImage1], keep_prob: 1.0})))
+print(extract_value(sess.run(y,feed_dict={x: [testImage2], keep_prob: 1.0})))
+print(extract_value(sess.run(y,feed_dict={x: [testImage3], keep_prob: 1.0})))
+print(extract_value(sess.run(y,feed_dict={x: [testImage4], keep_prob: 1.0})))
 
-    def percentageOfTotal(list,loc):
-        return list[loc]/sum(list)*100
-
-    print(str(number) + " - " +str(percentageOfTotal(analysedResults,number))+"% accurate.")
-    print("--------------------")
-    print("Number | Occurrences")
-    current = 0
-    for result in analysedResults:
-        print(str(current)+"      | "+str(result))
-        current += 1
-    print("--------------------")
-    print()
-
-    return analysedResults[number]
-
-totalCorrect = 0
-
-for i in range(unique_characters):
-    totalCorrect += analyse(i)
-
-print("Overall accuracy: "+str(totalCorrect*100/(number_of_test_images*unique_characters))+"%")
