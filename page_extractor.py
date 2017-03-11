@@ -9,6 +9,7 @@ from shutil import copyfile, rmtree
 
 directory = "/home/ollie/work/fyp/page_trainer"
 training_steps = 100
+precision = 0.999
 scaled_image_size = (32,32)
 
 
@@ -124,11 +125,10 @@ for char in characters:
 makedirs(directory + "/classified/unknown")
 
 unknown_characters = [f for f in listdir(directory + "/unclassified/") if isfile(join(directory + "/unclassified/", f))]
-unknown_characters = unknown_characters[:1000]
 
 def extract_value(prob_list):
     prob_list = prob_list[0]
-    indexes = [i for i in range(len(prob_list)) if prob_list[i] > 0.999999]
+    indexes = [i for i in range(len(prob_list)) if prob_list[i] > precision]
     if len(indexes) == 0:
        return "unknown"
     return characters[indexes[0]]
